@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+
+<!-- Create an element where the map will take place -->
+<svg id="SA_map" width="500" height="375"></svg>
+<div align="center">sample test</div>
+<script>
+
+  // The svg
+  var svg = d3.select("#SA_map"),
+          width = +svg.attr("width"),
+          height = +svg.attr("height");
+
+  // Map and projection
+  var path = d3.geoPath();
+  var projection = d3.geoMercator()
+          .scale(260)
+          .center([-60,-25])
+          .translate([width/2, height / 2]);
+
+  // Data and color scale
+  var data = d3.map();
+  var colorScale = d3.scaleThreshold()
+          .domain([1000, 2000, 3000, 4000, 5000, 6000])
+          .range(d3.schemeReds[7]);
+
+  // Load external data and boot
+  d3.queue()
+          .defer(d3.json, "mySA.geojson")
+          .defer(d3.csv, "total_deaths.csv", function(d) { data.set(d.code, +d.pop); })
+          .await(ready);
+
+  function ready(error, topo) {
+
+    // Draw the map
+    svg.append("g")
+            .selectAll("path")
+            .data(topo.features)
+            .enter()
+            .append("path")
+            // draw each country
+            .attr("d", d3.geoPath()
+                    .projection(projection)
+            )
+            // set the color of each country
+            .attr("fill", function (d) {
+              d.total = data.get(d.id) || 0;
+              return colorScale(d.total);
+            });
+  }
+
+</script>

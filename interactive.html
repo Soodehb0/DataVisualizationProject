@@ -1,0 +1,89 @@
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- Create a div where the graph will take place -->
+
+<svg id="chart1" width="400" height="300"></svg>
+<svg id="chart2" width="400" height="300"></svg>
+<script>
+
+    // set the dimensions and margins of the graph
+    var margin = {top: 10, right: 30, bottom: 30, left: 60},
+        width = 360 - margin.left - margin.right,
+        height = 300 - margin.top - margin.bottom;
+
+    // append the svg object to the body of the page
+    var svg1 = d3.select("#chart1")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
+    //Read the data
+    d3.csv("vaccination_per_hundred.csv", function(d){
+            return { date : d3.timeParse("%Y-%m-%d")(d.date), name : d.name, n : d.n }
+        },
+        function(data) {
+
+            // group the data: I want to draw one line per group
+            var sumstat = d3.nest() // nest function allows to group the calculation per level of a factor
+                .key(function(d) { return d.name;})
+                .entries(data);
+
+            // Add X axis --> it is a date format
+            var x = d3.scaleTime()
+                .domain(d3.extent(data, function(d) { return d.date; }))
+                .range([ 0, width ]);
+            svg1.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+            // Add Y axis
+            var y = d3.scaleLinear()
+                .domain([0, d3.max(data, function(d) { return +d.n; })])
+                .range([ height, 0 ]);
+            svg1.append("g")
+                .call(d3.axisLeft(y));
+
+            // color palette
+            var res = sumstat.map(function(d){ return d.key }) // list of group names
+            var color = d3.scaleOrdinal()
+                .domain(res)
+                .range(['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33','#a65628','#f781bf','#999999'])
+
+            // Draw the line
+            const path = svg1.selectAll(".line")
+                .data(sumstat)
+                .enter()
+                .append("path")
+                .attr("fill", "none")
+                .attr("stroke", function(d){ return color(d.key) })
+                .attr("stroke-width", 1.5)
+                .attr("d", function(d){
+                    return d3.line()
+                        .x(function(d) { return x(d.date); })
+                        .y(function(d) { return y(+d.n); })
+                        (d.values)
+                })
+
+            const svg2 = d3.select("#chart2");
+
+            // Append the blue circle to the second SVG element
+            const circle = svg2.append("circle")
+                .attr("cx", 200)
+                .attr("cy", 150)
+                .attr("r", 50)
+                .attr("fill", "blue");
+
+            // Hide the blue circle by default
+            circle.style("visibility", "hidden");
+            path.on("click", function() {
+                // Show the blue circle
+                circle.style("visibility", "visible");
+            });
+
+        })
+
+</script>
